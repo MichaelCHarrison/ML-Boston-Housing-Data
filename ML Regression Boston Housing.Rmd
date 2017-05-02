@@ -266,10 +266,57 @@ fitSVM
 ```
 - Tuning the Support Vector Machine Algorithm
 ```{r}
-
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+metric <- "RMSE"
+set.seed(seed)
+grid <- expand.grid(.sigma = c(0.025, 0.05, 0.075, 0.1, 0.125, 0.15),
+                    .C = seq(1, 10, by=1))
+fitSVM <- train(medv~., data=training,
+                method = "svmRadial", metric = metric, tuneGrid = grid,
+                preProc = c("BoxCox"), trControl = fitControl)
+fitSVM
+```
+```{r}
+plot(fitSVM)
 ```
 
 # b) Ensembles
+```{r}
+fitControl <- trainControl(method = "repeatedcv", number =10, repeats = 3)
+metric = "RMSE"
+#Random Forest
+set.seed(seed)
+fitRF <- train(medv~., data = training, 
+               method = "rf", metric = metric,
+               preProc = c("BoxCox"), trControl = fitControl)
+#Stochastic Gradient Boosting
+set.seed(seed)
+fitGBM <- train(medv~., data = training,
+                method = "gbm", metric = metric, 
+                preProc = c("BoxCox"), trControl = fitControl, verbose = FALSE)
+#Cubist
+set.seed(seed)
+fitCUBIST <- train(medv~., data = training, 
+                   method = "cubist", metric = metric, 
+                   preProc = c("BoxCox"), trControl = fitControl)
+
+ensembleResults <- resamples(list(RF = fitRF, GBM = fitGBM, CUBIST = fitCUBIST))
+summary(ensembleResults)
+```
+
+```{r}
+dotplot(ensembleResults, scales = scales)
+```
+
+```{r}
+fitCUBIST
+```
+
+
+- Tuning Cubist Algorithm
+```{r}
+
+```
 
 # 6. Finalize Model
 # a) Predictions on validation dataset
