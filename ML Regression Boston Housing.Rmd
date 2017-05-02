@@ -72,18 +72,203 @@ for(i in 1:13){
 
 ```
 
-# 3. Prepare Data
-# a) Data Cleaning
-# b) Feature Selection
-# c) Data Transforms
+```{r}
+par(mfrow = c(3,5))
+for(i in 1:13){
+        plot(density(training[,i]), 
+             main = names(training)[i], xlab = names(training)[i])
+}
+```
+
+```{r}
+par(mfrow = c(3,5))
+for(i in 1:13){
+        boxplot(training[,i], main = names(training)[i], xlab = names(training)[i])
+}
+```
+
+```{r}
+pairs(training[,1:14])
+```
+
+```{r}
+correlations <- cor(training[,1:13])
+corrplot(correlations, method = "circle")
+```
 
 # 4. Evaluate Algorithms
 # a) Test options and evaluation metric
-# b) Spot-Check Algorithms
+```{r}
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+metric <- "RMSE"
+seed <- set.seed(9)
+```
+
 # c) Compare Algorithms
+```{r}
+#Linear Model
+set.seed(seed)
+fitLM <- train(medv~., data = training, 
+               method = "lm", metric = metric, 
+               preProc = c("center", "scale"), trControl = fitControl)
+#Generalized Linear Model
+set.seed(seed)
+fitGLM <- train(medv~., data = training, 
+                method = "glm", metric = metric, 
+                preProc = c("center", "scale"), trControl = fitControl)
+#GLM.net
+set.seed(seed)
+fitGLMnet <- train(medv~., data = training,
+                   method = "glmnet", metric = metric,
+                   preProc = c("center", "scale"), trControl = fitControl)
+#Support Vector Machines
+set.seed(seed)
+fitSVM <- train(medv~., data = training,
+                method = "svmRadial", metric = metric,
+                preProc = c("center", "scale"), trControl = fitControl)
+#Classification And Regression Trees
+set.seed(seed)
+grid <- expand.grid(.cp = c(0,0.05,0.1))
+fitCART <- train(medv~., data = training,
+                 method = "rpart", metric = metric, tuneGrid = grid,
+                 preProc = c("center", "scale"), trControl = fitControl)
+#K-Nearest Neighbors
+set.seed(seed)
+fitKNN <- train(medv~., data = training,
+                method = "knn", metric = metric,
+                preProc = c("center", "scale"), trControl = fitControl)
+ 
+results <- resamples(list(LM = fitLM, 
+                          GLM = fitGLM,
+                          GLMNET = fitGLMnet,
+                          SVM = fitSVM,
+                          CART = fitCART,
+                          KNN = fitKNN))
+summary(results)
+```
+
+```{r}
+scales <- list(x = list(relation = "free"), y = list(relation = "free"))
+dotplot(results, scales = scales)
+```
+
+- Feature Selection
+```{r}
+set.seed(seed)
+cutoff <- 0.70
+correlations <- cor(training[,1:13])
+highCorrelation <- findCorrelation(correlations, cutoff = cutoff)
+for(value in highCorrelation){
+        print(names(training[value]))
+}
+```
+```{r}
+trainingFeatures <- training[-highCorrelation]
+dim(trainingFeatures)
+```
+- Re-run Algorithms
+```{r}
+#Linear Model
+set.seed(seed)
+fitLM <- train(medv~., data = trainingFeatures, 
+               method = "lm", metric = metric, 
+               preProc = c("center", "scale"), trControl = fitControl)
+#Generalized Linear Model
+set.seed(seed)
+fitGLM <- train(medv~., data = trainingFeatures, 
+                method = "glm", metric = metric, 
+                preProc = c("center", "scale"), trControl = fitControl)
+#GLM.net
+set.seed(seed)
+fitGLMnet <- train(medv~., data = trainingFeatures,
+                   method = "glmnet", metric = metric,
+                   preProc = c("center", "scale"), trControl = fitControl)
+#Support Vector Machines
+set.seed(seed)
+fitSVM <- train(medv~., data = trainingFeatures,
+                method = "svmRadial", metric = metric,
+                preProc = c("center", "scale"), trControl = fitControl)
+#Classification And Regression Trees
+set.seed(seed)
+grid <- expand.grid(.cp = c(0,0.05,0.1))
+fitCART <- train(medv~., data = trainingFeatures,
+                 method = "rpart", metric = metric, tuneGrid = grid,
+                 preProc = c("center", "scale"), trControl = fitControl)
+#K-Nearest Neighbors
+set.seed(seed)
+fitKNN <- train(medv~., data = trainingFeatures,
+                method = "knn", metric = metric,
+                preProc = c("center", "scale"), trControl = fitControl)
+ 
+featureResults <- resamples(list(LM = fitLM, 
+                          GLM = fitGLM,
+                          GLMNET = fitGLMnet,
+                          SVM = fitSVM,
+                          CART = fitCART,
+                          KNN = fitKNN))
+summary(featureResults)
+```
+```{r}
+dotplot(featureResults, scales = scales)
+```
+- Applying Box Cox transformation
+```{r}
+#Linear Model
+set.seed(seed)
+fitLM <- train(medv~., data = training, 
+               method = "lm", metric = metric, 
+               preProc = c("center", "scale", "BoxCox"), trControl = fitControl)
+#Generalized Linear Model
+set.seed(seed)
+fitGLM <- train(medv~., data = training, 
+                method = "glm", metric = metric, 
+                preProc = c("center", "scale", "BoxCox"), trControl = fitControl)
+#GLM.net
+set.seed(seed)
+fitGLMnet <- train(medv~., data = training,
+                   method = "glmnet", metric = metric,
+                   preProc = c("center", "scale", "BoxCox"), trControl = fitControl)
+#Support Vector Machines
+set.seed(seed)
+fitSVM <- train(medv~., data = training,
+                method = "svmRadial", metric = metric,
+                preProc = c("center", "scale", "BoxCox"), trControl = fitControl)
+#Classification And Regression Trees
+set.seed(seed)
+grid <- expand.grid(.cp = c(0,0.05,0.1))
+fitCART <- train(medv~., data = training,
+                 method = "rpart", metric = metric, tuneGrid = grid,
+                 preProc = c("center", "scale", "BoxCox"), trControl = fitControl)
+#K-Nearest Neighbors
+set.seed(seed)
+fitKNN <- train(medv~., data = training,
+                method = "knn", metric = metric,
+                preProc = c("center", "scale", "BoxCox"), trControl = fitControl)
+ 
+transformResults <- resamples(list(LM = fitLM, 
+                          GLM = fitGLM,
+                          GLMNET = fitGLMnet,
+                          SVM = fitSVM,
+                          CART = fitCART,
+                          KNN = fitKNN))
+summary(transformResults)
+```
+```{r}
+dotplot(transformResults, scales = scales)
+```
+
+
 
 # 5. Improve Accuracy
 # a) Algorithm Tuning
+```{r}
+fitSVM
+```
+- Tuning the Support Vector Machine Algorithm
+```{r}
+
+```
+
 # b) Ensembles
 
 # 6. Finalize Model
