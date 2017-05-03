@@ -315,10 +315,47 @@ fitCUBIST
 
 - Tuning Cubist Algorithm
 ```{r}
-
+grid <- expand.grid(.committees = seq(15, 25, by=1),
+                    .neighbors = c(3,5,7))
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+set.seed(seed)
+tuneCubist <- train(medv~., data = training, 
+                   method = "cubist", metric = metric, tuneGrid = grid,
+                   preProc = c("BoxCox"), trControl = fitControl)
+plot(tuneCubist)
+```
+```{r}
+tuneCubist
 ```
 
 # 6. Finalize Model
 # a) Predictions on validation dataset
+
 # b) Create standalone model on entire training dataset
+```{r}
+set.seed(seed)
+x <- training[,1:13]
+y <- training[,14]
+preprocessParams <- preProcess(x, method = c("BoxCox"))
+transX <- predict(preprocessParams, x)
+finalModel <- cubist(x=transX, y=y, committees = 18)
+finalModel
+```
+- Evaluate testing dataset
+```{r}
+library(Metrics)
+#transform testing
+testX <- testing[,1:13]
+trans_testX <- predict(preprocessParams, testX)
+testY <- testing[,14]
+
+predictions <- predict(finalModel, trans_testX, neighbors = 3)
+
+#RMSE
+rmse(predictions, testY)
+```
+```{r}
+r2 <- R2(predictions, testY)
+```
+
 # c) Save model for later use
